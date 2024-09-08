@@ -53,6 +53,29 @@
             z-index: 20; /* Ensure blocker is on top */
             pointer-events: none; /* Allow clicking through the blocker */
         }
+
+        .button-container {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 30; /* Ensure button is on top */
+        }
+
+        .action-button {
+            padding: 10px 20px;
+            font-size: 16px;
+            background-color: green;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .action-button:disabled {
+            background-color: grey;
+            cursor: not-allowed;
+        }
     </style>
 </head>
 <body>
@@ -61,11 +84,15 @@
         <div class="overlay"></div>
         <div class="blocker"></div> <!-- Blocking interactions -->
     </div>
+    <div class="button-container">
+        <button class="action-button" id="startButton" disabled>copy key</button>
+    </div>
 
     <script>
         let progress = 0;
         let loadingPaused = false;
         const loadingBar = document.querySelector('.loading-bar');
+        const startButton = document.getElementById('startButton');
         const maxProgress = 100;
 
         function updateProgress() {
@@ -90,12 +117,15 @@
                             progress = maxProgress;
                             loadingBar.style.width = `${progress}%`;
                             loadingBar.style.backgroundColor = 'darkgreen';
-                            // Copy the text to clipboard
-                            navigator.clipboard.writeText('NOTHING_SIGMA_REL').then(() => {
-                                // Show an alert when copying is complete
-                                alert('key copy :NOTHING_SIGMA_REL');
-                            }).catch(err => {
-                                console.error('Failed to copy text: ', err);
+                            // Enable the button and show the alert
+                            startButton.disabled = false;
+                            startButton.addEventListener('click', function() {
+                                // Copy the text to clipboard
+                                navigator.clipboard.writeText('NOTHING_SIGMA_REL').then(() => {
+                                    alert('key copy : NOTHING_SIGMA_REL');
+                                }).catch(err => {
+                                    console.error('Failed to copy text: ', err);
+                                });
                             });
                         }, 1000); // Time to load to 100%
                     }, 1000); // Time to move back to 90%
