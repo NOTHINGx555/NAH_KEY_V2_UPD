@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>key wait loding...</title>
+    <title>key wait loading...</title>
     <style>
         body {
             display: flex;
@@ -65,7 +65,6 @@
     <script>
         let progress = 0;
         let loadingPaused = false;
-        let timeoutId = null;
         const loadingBar = document.querySelector('.loading-bar');
         const maxProgress = 100;
 
@@ -91,8 +90,13 @@
                             progress = maxProgress;
                             loadingBar.style.width = `${progress}%`;
                             loadingBar.style.backgroundColor = 'darkgreen';
-                            // Open the specified page when loading is complete
-                            window.location.href = 'https://pastebin.com/M9qgRZEN';
+                            // Copy the text to clipboard
+                            navigator.clipboard.writeText('NOTHING_SIGMA_REL').then(() => {
+                                // Show an alert when copying is complete
+                                alert('key copy :NOTHING_SIGMA_REL');
+                            }).catch(err => {
+                                console.error('Failed to copy text: ', err);
+                            });
                         }, 1000); // Time to load to 100%
                     }, 1000); // Time to move back to 90%
                 }, 1000); // Time at 99%
