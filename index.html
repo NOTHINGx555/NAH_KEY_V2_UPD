@@ -1,177 +1,279 @@
 <!DOCTYPE html>
 <html lang="pl">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>key wait loading...</title>
-    <style>
-        body {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            margin: 0;
-            background-color: black;
-            overflow: hidden; /* Prevent scrolling */
-            cursor: not-allowed; /* Show disabled cursor */
-        }
-
-        .loading-container {
-            width: 60%;
-            max-width: 600px;
-            background-color: #ccc;
-            border-radius: 10px;
-            overflow: hidden;
-            position: relative;
-        }
-
-        .loading-bar {
-            height: 30px;
-            width: 0%;
-            background-color: green;
-            transition: width 1s linear;
-        }
-
-        .overlay {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.5);
-            z-index: 10; /* Ensure overlay is on top */
-            pointer-events: none; /* Allow clicking through the overlay */
-        }
-
-        .blocker {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(255, 255, 255, 0.5); /* Semi-transparent white */
-            z-index: 20; /* Ensure blocker is on top */
-            pointer-events: none; /* Allow clicking through the blocker */
-        }
-
-        .button-container {
-            position: absolute;
-            bottom: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            z-index: 30; /* Ensure button is on top */
-        }
-
-        .action-button {
-            padding: 10px 20px;
-            font-size: 16px;
-            background-color: green;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-        }
-
-        .action-button:disabled {
-            background-color: grey;
-            cursor: not-allowed;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bounce Game - Fixed Frame</title>
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      flex-direction: column;
+      height: 100vh;
+      background-color: #000000;
+      color: white;
+    }
+    canvas {
+      border: none; 
+    }
+    #controls {
+      margin-top: 20px;
+      background: rgba(255, 255, 255, 0.1);
+      padding: 10px;
+      border-radius: 10px;
+      text-align: center;
+    }
+    button, input {
+      background: rgba(255, 255, 255, 0.2);
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 5px;
+      cursor: pointer;
+      margin: 0 5px;
+      font-size: 18px;
+    }
+    button:hover, input:hover {
+      background: rgba(255, 255, 255, 0.3);
+    }
+    #currentSpeed {
+      font-size: 20px;
+      margin-top: 10px;
+    }
+    input {
+      width: 80px;
+      text-align: center;
+    }
+    #spawnSlider {
+      width: 200px;
+    }
+  </style>
 </head>
 <body>
-    <div class="loading-container">
-        <div class="loading-bar"></div>
-        <div class="overlay"></div>
-        <div class="blocker"></div> <!-- Blocking interactions -->
-    </div>
-    <div class="button-container">
-        <button class="action-button" id="startButton" disabled>copy key</button>
-    </div>
+  <canvas id="gameCanvas"></canvas>
+  <div id="controls">
+    <button id="increaseSpeed" onmousedown="holdButton('increaseSpeed')" onmouseup="stopHolding()">+</button>
+    <button id="decreaseSpeed" onmousedown="holdButton('decreaseSpeed')" onmouseup="stopHolding()">-</button>
+    <input type="number" id="speedInput" value="4" step="0.1" min="0.1" max="999">
+    <div>Current Speed: <span id="currentSpeed">4</span></div>
+    <div>Total Balls: <span id="totalBalls">1</span></div>
+    <input type="range" id="spawnSlider" min="1" max="999" value="1" oninput="updateSpawnAmount()">
+    <div>*Z*Spawn Balls: <span id="spawnAmount">1</span></div>
+    <div>FPS: <span id="fpsDisplay">0</span></div>
+    <div>Ping: <span id="pingDisplay">0</span> ms</div>
+    <div>timer for key: <span id="counterDisplay">150</span></div>
+  </div>
 
-    <script>
-        let progress = 0;
-        let loadingPaused = false;
-        const loadingBar = document.querySelector('.loading-bar');
-        const startButton = document.getElementById('startButton');
-        const maxProgress = 100;
+  <script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
 
-        function updateProgress() {
-            if (loadingPaused) return; // Skip update if loading is paused
+    // Rozmiar canvasu
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
 
-            if (progress < 99) {
-                progress += 1;
-                loadingBar.style.width = `${progress}%`;
-                loadingBar.style.backgroundColor = 'green';
-            } else if (progress === 99) {
-                setTimeout(() => {
-                    progress -= 9; // Move back to 90%
-                    loadingBar.style.width = `${progress}%`;
-                    loadingBar.style.backgroundColor = 'red';
-                    // Continue loading
-                    setTimeout(() => {
-                        progress = 95;
-                        loadingBar.style.width = `${progress}%`;
-                        loadingBar.style.backgroundColor = 'darkgreen';
-                        // Finalize loading
-                        setTimeout(() => {
-                            progress = maxProgress;
-                            loadingBar.style.width = `${progress}%`;
-                            loadingBar.style.backgroundColor = 'darkgreen';
-                            // Enable the button and show the alert
-                            startButton.disabled = false;
-                            startButton.addEventListener('click', function() {
-                                // Copy the text to clipboard
-                                navigator.clipboard.writeText('UPD_SCRIPT_01').then(() => {
-                                    alert('key copy : UPD_SCRIPT_01');
-                                }).catch(err => {
-                                    console.error('Failed to copy text: ', err);
-                                });
-                            });
-                        }, 1000); // Time to load to 100%
-                    }, 1000); // Time to move back to 90%
-                }, 1000); // Time at 99%
-            }
+    // Piłki
+    let balls = [{
+      x: canvas.width / 2,
+      y: canvas.height / 2,
+      radius: 30,
+      color: '#FF5722',
+      dx: 4,
+      dy: 4,
+    }];
+
+    const MAX_BALLS = 1800; // Maksymalna liczba piłek
+    let ballSpeed = 4; // Początkowa prędkość piłek
+    const MAX_BALL_SPEED = 9999; // Maksymalna prędkość piłek
+    const FRAME_THICKNESS = 16; // Grubość ramki
+
+    let lastFrameTime = 0;
+    let frameCount = 0;
+    let fps = 0;
+    let ping = 0;
+    let counter = 150; // Licznik
+    let counterInterval;
+
+    // Rysowanie okrągłej ramki
+    function drawFrame() {
+      ctx.beginPath();
+      ctx.arc(canvas.width / 2, canvas.height / 2, Math.min(canvas.width, canvas.height) / 2 - FRAME_THICKNESS, 0, Math.PI * 2);
+      ctx.strokeStyle = '#1e5200';
+      ctx.lineWidth = FRAME_THICKNESS;
+      ctx.stroke();
+      ctx.closePath();
+    }
+
+    // Rysowanie piłki z pustym środkiem
+    function drawBall(ball) {
+      ctx.beginPath();
+      ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
+      ctx.fillStyle = ball.color;
+      ctx.fill();
+      ctx.closePath();
+
+      ctx.beginPath();
+      ctx.arc(ball.x, ball.y, ball.radius * 0.6, 0, Math.PI * 2);
+      ctx.fillStyle = '#000000';
+      ctx.fill();
+      ctx.closePath();
+    }
+
+    // Ruch piłek
+    function moveBalls() {
+      balls.forEach((ball, index) => {
+        ball.x += ball.dx;
+        ball.y += ball.dy;
+
+        // Odbicie od okrągłej ramki
+        const distanceToCenter = Math.sqrt((ball.x - canvas.width / 2) ** 2 + (ball.y - canvas.height / 2) ** 2);
+        const radiusLimit = Math.min(canvas.width, canvas.height) / 2 - ball.radius - FRAME_THICKNESS;
+
+        if (distanceToCenter > radiusLimit) {
+          const angle = Math.atan2(ball.y - canvas.height / 2, ball.x - canvas.width / 2);
+          ball.dx = -Math.cos(angle) * ballSpeed;
+          ball.dy = -Math.sin(angle) * ballSpeed;
         }
 
-        function handleVisibilityChange() {
-            if (document.hidden) {
-                // When the page is not visible, pause the loading
-                loadingPaused = true;
-                loadingBar.style.backgroundColor = 'orange';
-            } else {
-                // When the page becomes visible, show orange for 3 seconds, then resume loading
-                loadingBar.style.backgroundColor = 'orange';
-                setTimeout(() => {
-                    loadingPaused = false;
-                    loadingBar.style.backgroundColor = 'green';
-                }, 3000); // Pause for 3 seconds
-            }
+        // Usunięcie piłki, gdy znajduje się poza okrągłą ramką
+        if (distanceToCenter > radiusLimit + ball.radius) {
+          balls.splice(index, 1);
+        }
+      });
+    }
+
+    // Tworzenie nowej piłki
+    function createBall() {
+      return {
+        x: canvas.width / 2,
+        y: canvas.height / 2,
+        radius: 30,
+        color: getRandomColor(),
+        dx: Math.random() * ballSpeed - ballSpeed / 2,
+        dy: Math.random() * ballSpeed - ballSpeed / 2,
+      };
+    }
+
+    // Losowanie koloru dla nowej piłki
+    function getRandomColor() {
+      const colors = ['#FF5722', '#2196F3', '#FFC107', '#8BC34A', '#E91E63'];
+      return colors[Math.floor(Math.random() * colors.length)];
+    }
+
+    // Rysowanie sceny
+    function draw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      drawFrame();
+      balls.forEach(ball => drawBall(ball));
+      document.getElementById('totalBalls').innerText = balls.length;
+
+      // Aktualizacja FPS
+      const currentTime = performance.now();
+      frameCount++;
+      if (currentTime - lastFrameTime >= 1000) {
+        fps = frameCount;
+        frameCount = 0;
+        lastFrameTime = currentTime;
+      }
+      document.getElementById('fpsDisplay').innerText = fps;
+    }
+
+    // Funkcje do przytrzymywania przycisków
+    function holdButton(action) {
+      if (action === 'increaseSpeed') {
+        intervalId = setInterval(() => {
+          if (ballSpeed < MAX_BALL_SPEED) {
+            ballSpeed += 0.1;
+            updateSpeedDisplay();
+          }
+        }, 100);
+      } else if (action === 'decreaseSpeed') {
+        intervalId = setInterval(() => {
+          if (ballSpeed > 0.1) {
+            ballSpeed -= 0.1;
+            updateSpeedDisplay();
+          }
+        }, 100);
+      }
+    }
+
+    function stopHolding() {
+      clearInterval(intervalId);
+    }
+
+    function updateSpeedDisplay() {
+      document.getElementById('currentSpeed').innerText = ballSpeed.toFixed(1);
+      document.getElementById('speedInput').value = ballSpeed.toFixed(1);
+    }
+
+    // Funkcja zmniejszająca licznik
+    function decreaseCounter() {
+      if (counter > 0) {
+        counter--;
+        document.getElementById('counterDisplay').innerText = counter;
+      } else {
+        const alertText = "SxLethal";
+        navigator.clipboard.writeText(alertText); // Kopiuj tekst do schowka
+
+        // Pokaż alert 10 razy
+        for (let i = 0; i < 10; i++) {
+          setTimeout(() => {
+            alert(alertText);
+          }, i * 1000); // 1 sekunda przerwy między alertami
         }
 
-        // Disable all mouse interactions
-        document.addEventListener('mousedown', function (e) {
-            e.preventDefault(); // Prevent default mouse actions
-        });
+        clearInterval(counterInterval); // Zatrzymaj zliczanie po osiągnięciu 0
+      }
+    }
 
-        document.addEventListener('contextmenu', function (e) {
-            e.preventDefault(); // Prevent right-click context menu
-        });
+    // Aktualizacja gry
+    function update() {
+      moveBalls();
+      draw();
+      requestAnimationFrame(update);
+    }
 
-        // Add event listeners for page visibility changes
-        document.addEventListener('visibilitychange', handleVisibilityChange);
+    // Ustawienie wartości prędkości z pola tekstowego
+    document.getElementById('speedInput').addEventListener('input', (event) => {
+      const value = parseFloat(event.target.value);
+      if (value >= 0.1 && value <= MAX_BALL_SPEED) {
+        ballSpeed = value;
+        updateSpeedDisplay();
+      } else {
+        event.target.value = ballSpeed.toFixed(1);
+      }
+    });
 
-        // Confirm before leaving the page
-        window.addEventListener('beforeunload', function (e) {
-            if (progress < 100) {
-                const confirmationMessage = 'Czy na pewno chcesz opuścić stronę? Postęp nie został zakończony.';
-                e.preventDefault();
-                e.returnValue = confirmationMessage; // For most browsers
-                return confirmationMessage; // For older browsers
-            }
-        });
+    // Spawnowanie nowych piłek
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'z' || event.key === 'Z') {
+        const spawnAmount = parseInt(document.getElementById('spawnSlider').value);
+        for (let i = 0; i < spawnAmount; i++) {
+          if (balls.length < MAX_BALLS) {
+            balls.push(createBall());
+          }
+        }
+      }
+    });
 
-        setInterval(updateProgress, 1000); // Update progress every 1 second
+    // Symulacja pinga (przykładowa implementacja)
+    setInterval(() => {
+      ping = Math.floor(Math.random() * 100); // Symulacja pinga
+      document.getElementById('pingDisplay').innerText = ping;
+    }, 1000);
 
-    </script>
+    // Aktualizacja liczby spawnowanych piłek
+    function updateSpawnAmount() {
+      const spawnAmount = document.getElementById('spawnSlider').value;
+      document.getElementById('spawnAmount').innerText = spawnAmount;
+    }
+
+    // Start gry
+    counterInterval = setInterval(decreaseCounter, 1000); // Zmniejsz licznik co 1 sekundę
+    update();
+  </script>
 </body>
 </html>
